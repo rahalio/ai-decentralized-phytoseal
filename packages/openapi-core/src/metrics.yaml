@@ -1,0 +1,252 @@
+openapi: 3.1.0
+info:
+  title: Phytoseal Metrics API
+  version: 0.1.0
+  description: |
+    Cycle-time and paperwork-share metrics — median issue-to-accept hours,
+    interaction proxy counts, and stored period reports for ops dashboards.
+  license:
+    name: Proprietary
+    url: https://phytoseal.local/license
+  x-domain: mtr
+servers:
+  - url: https://api.phytoseal.local
+    description: Phytoseal API
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: Metrics
+    description: Cycle-time metrics and stored reports
+
+paths:
+  /v1/metrics/cycle-time:
+    get:
+      operationId: getCycleTimeMetrics
+      tags: [Metrics]
+      summary: Get live cycle-time metrics for a period
+      x-repository: none
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            description: ISO period or label (e.g. 2026-Q1)
+        - name: commodity
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Optional commodity filter (e.g. plant product class).
+      responses:
+        '200':
+          description: Cycle-time metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleTimeMetricsResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/metrics/reports:
+    get:
+      operationId: listCycleTimeReports
+      tags: [Metrics]
+      summary: List stored cycle-time reports
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/Cursor
+        - $ref: ./common/parameters.yaml#/components/parameters/Limit
+        - name: period
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cycle-time reports page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleTimeReportListResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: createCycleTimeReport
+      tags: [Metrics]
+      summary: Snapshot cycle-time metrics into a stored report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CycleTimeReportCreateRequest'
+      responses:
+        '201':
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleTimeReportResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/metrics/reports/{reportId}:
+    get:
+      operationId: getCycleTimeReport
+      tags: [Metrics]
+      summary: Get a stored cycle-time report
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/MetricsReportId
+      responses:
+        '200':
+          description: Cycle-time report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleTimeReportResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth
+
+  schemas:
+    CycleTimeMetrics:
+      type: object
+      required:
+        - period
+        - medianIssueToAcceptHours
+        - interactionProxyCount
+        - paperworkCostSharePct
+        - partiesOnboarded
+        - baselineInteractionCount
+      properties:
+        period:
+          type: string
+          minLength: 1
+        medianIssueToAcceptHours:
+          type: number
+          format: float
+          minimum: 0
+          description: Median hours from certificate issue to import acceptance.
+        interactionProxyCount:
+          type: integer
+          minimum: 0
+          description: Proxy for party interactions per shipment in the period.
+        paperworkCostSharePct:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Estimated paperwork cost share of container moving cost (%).
+        partiesOnboarded:
+          type: integer
+          minimum: 0
+          description: Backbone parties onboarded in or by the period.
+        baselineInteractionCount:
+          type: integer
+          minimum: 0
+          default: 200
+          description: Baseline interaction count for comparison (default 200).
+
+    CycleTimeMetricsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CycleTimeMetrics'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    CycleTimeReport:
+      type: object
+      required: [id, period, metrics, createdAt]
+      properties:
+        id:
+          $ref: ./common/primitives.yaml#/components/schemas/MetricsReportId
+        period:
+          type: string
+          minLength: 1
+        metrics:
+          $ref: '#/components/schemas/CycleTimeMetrics'
+        createdAt:
+          type: string
+          format: date-time
+
+    CycleTimeReportCreateRequest:
+      type: object
+      required: [period]
+      properties:
+        period:
+          type: string
+          minLength: 1
+        commodity:
+          type: string
+        metrics:
+          $ref: '#/components/schemas/CycleTimeMetrics'
+          description: Optional explicit metrics; otherwise computed for the period.
+
+    CycleTimeReportResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CycleTimeReport'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    CycleTimeReportListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CycleTimeReport'
+        nextCursor:
+          type: string
+
+    CycleTimeReportListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CycleTimeReportListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

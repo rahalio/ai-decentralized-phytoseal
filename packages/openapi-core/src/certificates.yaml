@@ -1,0 +1,416 @@
+openapi: 3.1.0
+info:
+  title: Phytoseal Certificates API
+  version: 0.1.0
+  description: |
+    Phytosanitary and related-authorisation certificate ledger — issuance,
+    presentation, acceptance/rejection, and sealed-payload workflow events (BR-1, BR-2).
+  license:
+    name: Proprietary
+    url: https://phytoseal.local/license
+  x-domain: crt
+servers:
+  - url: https://api.phytoseal.local
+    description: Phytoseal API
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: Certificates
+    description: Certificate registration and NPPO presentation workflow
+  - name: CertificateEvents
+    description: Immutable certificate lifecycle events
+
+paths:
+  /v1/certificates:
+    get:
+      operationId: listCertificates
+      tags: [Certificates]
+      summary: List certificates
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/Cursor
+        - $ref: ./common/parameters.yaml#/components/parameters/Limit
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/CertificateStatus'
+        - name: certificateType
+          in: query
+          schema:
+            $ref: '#/components/schemas/CertificateType'
+        - name: shipmentRef
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Certificates page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateListResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: createCertificate
+      tags: [Certificates]
+      summary: Register a certificate on the ledger
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificateCreateRequest'
+      responses:
+        '201':
+          description: Certificate registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/certificates/{certificateId}:
+    get:
+      operationId: getCertificate
+      tags: [Certificates]
+      summary: Get a certificate
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: certificateId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+      responses:
+        '200':
+          description: Certificate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/certificates/{certificateId}/present:
+    post:
+      operationId: presentCertificate
+      tags: [Certificates]
+      summary: Present certificate to import authority
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: certificateId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificatePresentRequest'
+      responses:
+        '202':
+          description: Presentation submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/certificates/{certificateId}/decision:
+    post:
+      operationId: decideCertificate
+      tags: [Certificates]
+      summary: Accept or reject a presented certificate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: certificateId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificateDecisionRequest'
+      responses:
+        '200':
+          description: Decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/certificates/{certificateId}/events:
+    get:
+      operationId: listCertificateEvents
+      tags: [CertificateEvents]
+      summary: List events for a certificate
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: certificateId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+        - $ref: ./common/parameters.yaml#/components/parameters/Cursor
+        - $ref: ./common/parameters.yaml#/components/parameters/Limit
+      responses:
+        '200':
+          description: Certificate events page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateEventListResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth
+
+  schemas:
+    CertificateType:
+      type: string
+      enum: [phytosanitary, related_authorisation]
+    CertificateStatus:
+      type: string
+      enum: [draft, issued, presented, accepted, rejected, amended, held]
+    CertificateEventType:
+      type: string
+      enum:
+        - issued
+        - presented
+        - accepted
+        - rejected
+        - amended
+        - hold_placed
+        - hold_released
+    CertificateDecisionOutcome:
+      type: string
+      enum: [accepted, rejected]
+
+    Certificate:
+      type: object
+      required:
+        - id
+        - certificateType
+        - status
+        - payloadHash
+        - exportAuthorityId
+        - shipmentRef
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+        certificateType:
+          $ref: '#/components/schemas/CertificateType'
+        status:
+          $ref: '#/components/schemas/CertificateStatus'
+        payloadHash:
+          type: string
+          minLength: 1
+          description: Hash of the sealed certificate payload (immutable until governed amendment).
+        exportAuthorityId:
+          type: string
+          minLength: 1
+          description: Exporting NPPO or delegated issuer party id.
+        importAuthorityId:
+          type: string
+          minLength: 1
+          description: Importing NPPO or delegated authority party id.
+        shipmentRef:
+          type: string
+          minLength: 1
+          description: External shipment / consignment reference.
+        legalHoldId:
+          $ref: ./common/primitives.yaml#/components/schemas/LegalHoldId
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CertificateCreateRequest:
+      type: object
+      required: [certificateType, payloadHash, exportAuthorityId, shipmentRef]
+      properties:
+        certificateType:
+          $ref: '#/components/schemas/CertificateType'
+        payloadHash:
+          type: string
+          minLength: 1
+        exportAuthorityId:
+          type: string
+          minLength: 1
+        importAuthorityId:
+          type: string
+          minLength: 1
+        shipmentRef:
+          type: string
+          minLength: 1
+        status:
+          $ref: '#/components/schemas/CertificateStatus'
+          description: Optional initial status; defaults to draft or issued per issuer policy.
+
+    CertificatePresentRequest:
+      type: object
+      required: [importAuthorityId]
+      properties:
+        importAuthorityId:
+          type: string
+          minLength: 1
+        presentationNote:
+          type: string
+          maxLength: 2000
+
+    CertificateDecisionRequest:
+      type: object
+      required: [outcome]
+      properties:
+        outcome:
+          $ref: '#/components/schemas/CertificateDecisionOutcome'
+        reasonCode:
+          type: string
+          maxLength: 100
+        detail:
+          type: string
+          maxLength: 2000
+
+    CertificateEvent:
+      type: object
+      required:
+        - id
+        - certificateId
+        - eventType
+        - occurredAt
+        - actorId
+      properties:
+        id:
+          $ref: ./common/primitives.yaml#/components/schemas/CertificateEventId
+        certificateId:
+          $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+        eventType:
+          $ref: '#/components/schemas/CertificateEventType'
+        occurredAt:
+          type: string
+          format: date-time
+        actorId:
+          type: string
+          minLength: 1
+          description: Operator user or machine actor that produced the event.
+        detail:
+          type: string
+          maxLength: 4000
+
+    CertificateResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Certificate'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    CertificateListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certificate'
+        nextCursor:
+          type: string
+
+    CertificateListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CertificateListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    CertificateEventListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CertificateEvent'
+        nextCursor:
+          type: string
+
+    CertificateEventListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CertificateEventListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

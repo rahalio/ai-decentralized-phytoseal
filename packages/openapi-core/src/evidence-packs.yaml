@@ -1,0 +1,199 @@
+openapi: 3.1.0
+info:
+  title: Phytoseal Evidence Packs API
+  version: 0.1.0
+  description: |
+    AEO / trusted-trader evidence packs exported from certificate and
+    classification histories for audit windows (BR-7).
+  license:
+    name: Proprietary
+    url: https://phytoseal.local/license
+  x-domain: evd
+servers:
+  - url: https://api.phytoseal.local
+    description: Phytoseal API
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: EvidencePacks
+    description: AEO evidence pack generation and retrieval
+
+paths:
+  /v1/evidence-packs:
+    get:
+      operationId: listEvidencePacks
+      tags: [EvidencePacks]
+      summary: List evidence packs
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/Cursor
+        - $ref: ./common/parameters.yaml#/components/parameters/Limit
+        - name: partyId
+          in: query
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/PortPartyId
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/EvidencePackStatus'
+        - name: period
+          in: query
+          schema:
+            type: string
+            description: ISO period or label (e.g. 2026-Q1)
+      responses:
+        '200':
+          description: Evidence packs page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidencePackListResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: createEvidencePack
+      tags: [EvidencePacks]
+      summary: Create an AEO evidence pack
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidencePackCreateRequest'
+      responses:
+        '201':
+          description: Evidence pack created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidencePackResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/evidence-packs/{packId}:
+    get:
+      operationId: getEvidencePack
+      tags: [EvidencePacks]
+      summary: Get an evidence pack
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: packId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/EvidencePackId
+      responses:
+        '200':
+          description: Evidence pack
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidencePackResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth
+
+  schemas:
+    EvidencePackStatus:
+      type: string
+      enum: [generating, ready, failed]
+
+    EvidencePack:
+      type: object
+      required:
+        - id
+        - period
+        - packHash
+        - certificateCount
+        - classificationReviewCount
+        - status
+        - createdAt
+      properties:
+        id:
+          $ref: ./common/primitives.yaml#/components/schemas/EvidencePackId
+        period:
+          type: string
+          minLength: 1
+          description: Reporting period covered by the pack.
+        partyId:
+          $ref: ./common/primitives.yaml#/components/schemas/PortPartyId
+        packHash:
+          type: string
+          minLength: 1
+          description: Integrity hash of the exported evidence bundle.
+        certificateCount:
+          type: integer
+          minimum: 0
+        classificationReviewCount:
+          type: integer
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/EvidencePackStatus'
+        createdAt:
+          type: string
+          format: date-time
+
+    EvidencePackCreateRequest:
+      type: object
+      required: [period]
+      properties:
+        period:
+          type: string
+          minLength: 1
+        partyId:
+          $ref: ./common/primitives.yaml#/components/schemas/PortPartyId
+
+    EvidencePackResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/EvidencePack'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    EvidencePackListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidencePack'
+        nextCursor:
+          type: string
+
+    EvidencePackListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/EvidencePackListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

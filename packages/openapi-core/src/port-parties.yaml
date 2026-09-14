@@ -1,0 +1,610 @@
+openapi: 3.1.0
+info:
+  title: Phytoseal Port Parties API
+  version: 0.1.0
+  description: |
+    Port-party directory and disclosure policies — one-connection backbone
+    onboarding (BR-5) with field-level visibility rules for certificate classes.
+  license:
+    name: Proprietary
+    url: https://phytoseal.local/license
+  x-domain: pty
+servers:
+  - url: https://api.phytoseal.local
+    description: Phytoseal API
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: PortParties
+    description: Port-network party registration and backbone invite
+  - name: DisclosurePolicies
+    description: Document-class disclosure rules and party-view simulation
+
+paths:
+  /v1/port-parties:
+    get:
+      operationId: listPortParties
+      tags: [PortParties]
+      summary: List port parties
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/Cursor
+        - $ref: ./common/parameters.yaml#/components/parameters/Limit
+        - name: partyType
+          in: query
+          schema:
+            $ref: '#/components/schemas/PartyType'
+        - name: integrationStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/IntegrationStatus'
+      responses:
+        '200':
+          description: Port parties page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortPartyListResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: createPortParty
+      tags: [PortParties]
+      summary: Register a port party
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortPartyCreateRequest'
+      responses:
+        '201':
+          description: Port party registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortPartyResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/port-parties/{partyId}:
+    parameters:
+      - name: partyId
+        in: path
+        required: true
+        schema:
+          $ref: ./common/primitives.yaml#/components/schemas/PortPartyId
+    get:
+      operationId: getPortParty
+      tags: [PortParties]
+      summary: Get a port party
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Port party
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortPartyResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    patch:
+      operationId: updatePortParty
+      tags: [PortParties]
+      summary: Update a port party
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortPartyUpdateRequest'
+      responses:
+        '200':
+          description: Updated port party
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortPartyResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/port-parties/{partyId}/invite:
+    post:
+      operationId: invitePortParty
+      tags: [PortParties]
+      summary: Send backbone invite to a port party
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partyId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/PortPartyId
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortPartyInviteRequest'
+      responses:
+        '200':
+          description: Invite issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortPartyResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/disclosure-policies:
+    get:
+      operationId: listDisclosurePolicies
+      tags: [DisclosurePolicies]
+      summary: List disclosure policies
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/Cursor
+        - $ref: ./common/parameters.yaml#/components/parameters/Limit
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DisclosurePolicyStatus'
+        - name: documentClass
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Disclosure policies page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisclosurePolicyListResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: createDisclosurePolicy
+      tags: [DisclosurePolicies]
+      summary: Create a disclosure policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisclosurePolicyCreateRequest'
+      responses:
+        '201':
+          description: Disclosure policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisclosurePolicyResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/disclosure-policies/{policyId}:
+    parameters:
+      - name: policyId
+        in: path
+        required: true
+        schema:
+          $ref: ./common/primitives.yaml#/components/schemas/DisclosurePolicyId
+    get:
+      operationId: getDisclosurePolicy
+      tags: [DisclosurePolicies]
+      summary: Get a disclosure policy
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Disclosure policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisclosurePolicyResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    put:
+      operationId: replaceDisclosurePolicy
+      tags: [DisclosurePolicies]
+      summary: Replace a disclosure policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisclosurePolicyReplaceRequest'
+      responses:
+        '200':
+          description: Disclosure policy replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisclosurePolicyResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/disclosure-policies/{policyId}/simulate:
+    post:
+      operationId: simulateDisclosurePolicy
+      tags: [DisclosurePolicies]
+      summary: Preview party-view under a disclosure policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/DisclosurePolicyId
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisclosurePolicySimulateRequest'
+      responses:
+        '200':
+          description: Party-view preview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisclosurePolicySimulateResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth
+
+  schemas:
+    PartyType:
+      type: string
+      enum: [shipper, forwarder, terminal, broker, nppo, customs, platform]
+    IntegrationStatus:
+      type: string
+      enum: [pending, connected, error]
+    DisclosurePolicyStatus:
+      type: string
+      enum: [draft, published]
+
+    PortParty:
+      type: object
+      required:
+        - id
+        - name
+        - partyType
+        - integrationStatus
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: ./common/primitives.yaml#/components/schemas/PortPartyId
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        partyType:
+          $ref: '#/components/schemas/PartyType'
+        disclosureProfile:
+          type: string
+          description: Named profile or policy key governing default field visibility.
+        integrationStatus:
+          $ref: '#/components/schemas/IntegrationStatus'
+        documentClassesEnabled:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Document classes this party may exchange on the backbone.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PortPartyCreateRequest:
+      type: object
+      required: [name, partyType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        partyType:
+          $ref: '#/components/schemas/PartyType'
+        disclosureProfile:
+          type: string
+        documentClassesEnabled:
+          type: array
+          items:
+            type: string
+            minLength: 1
+
+    PortPartyUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        disclosureProfile:
+          type: string
+        integrationStatus:
+          $ref: '#/components/schemas/IntegrationStatus'
+        documentClassesEnabled:
+          type: array
+          items:
+            type: string
+            minLength: 1
+
+    PortPartyInviteRequest:
+      type: object
+      required: [contactEmail]
+      properties:
+        contactEmail:
+          type: string
+          format: email
+        message:
+          type: string
+          maxLength: 2000
+
+    DisclosureRule:
+      type: object
+      required: [partyRole, visibleFields]
+      properties:
+        partyRole:
+          $ref: '#/components/schemas/PartyType'
+        visibleFields:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+
+    DisclosurePolicy:
+      type: object
+      required:
+        - id
+        - name
+        - documentClass
+        - rules
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: ./common/primitives.yaml#/components/schemas/DisclosurePolicyId
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        documentClass:
+          type: string
+          minLength: 1
+          description: Certificate or authorisation document class this policy covers.
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisclosureRule'
+        status:
+          $ref: '#/components/schemas/DisclosurePolicyStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DisclosurePolicyCreateRequest:
+      type: object
+      required: [name, documentClass, rules]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        documentClass:
+          type: string
+          minLength: 1
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisclosureRule'
+          minItems: 1
+        status:
+          $ref: '#/components/schemas/DisclosurePolicyStatus'
+
+    DisclosurePolicyReplaceRequest:
+      type: object
+      required: [name, documentClass, rules, status]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        documentClass:
+          type: string
+          minLength: 1
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisclosureRule'
+          minItems: 1
+        status:
+          $ref: '#/components/schemas/DisclosurePolicyStatus'
+
+    DisclosurePolicySimulateRequest:
+      type: object
+      required: [partyRole]
+      properties:
+        partyRole:
+          $ref: '#/components/schemas/PartyType'
+        sampleFields:
+          type: object
+          additionalProperties:
+            type: string
+          description: Optional sample field map to project through the policy.
+
+    DisclosurePolicySimulateResult:
+      type: object
+      required: [partyRole, visibleFields]
+      properties:
+        partyRole:
+          $ref: '#/components/schemas/PartyType'
+        visibleFields:
+          type: array
+          items:
+            type: string
+        projectedFields:
+          type: object
+          additionalProperties:
+            type: string
+          description: Sample fields after disclosure filtering (when sampleFields provided).
+
+    PortPartyResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/PortParty'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    PortPartyListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortParty'
+        nextCursor:
+          type: string
+
+    PortPartyListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/PortPartyListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    DisclosurePolicyResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DisclosurePolicy'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    DisclosurePolicyListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisclosurePolicy'
+        nextCursor:
+          type: string
+
+    DisclosurePolicyListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DisclosurePolicyListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    DisclosurePolicySimulateResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DisclosurePolicySimulateResult'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

@@ -1,0 +1,293 @@
+openapi: 3.1.0
+info:
+  title: Phytoseal Amendments API
+  version: 0.1.0
+  description: |
+    Governed certificate amendments with audit trail — propose, approve, or reject
+    payload-hash changes without silent alteration of sealed certificates (BR-3).
+  license:
+    name: Proprietary
+    url: https://phytoseal.local/license
+  x-domain: amd
+servers:
+  - url: https://api.phytoseal.local
+    description: Phytoseal API
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: Amendments
+    description: Governed certificate amendment workflow
+
+paths:
+  /v1/amendments:
+    get:
+      operationId: listAmendments
+      tags: [Amendments]
+      summary: List amendments (optionally open / by certificate)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/Cursor
+        - $ref: ./common/parameters.yaml#/components/parameters/Limit
+        - name: certificateId
+          in: query
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/AmendmentStatus'
+          description: Filter by status; omit or use proposed for open amendments.
+      responses:
+        '200':
+          description: Amendments page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmendmentListResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/certificates/{certificateId}/amendments:
+    post:
+      operationId: createCertificateAmendment
+      tags: [Amendments]
+      summary: Propose an amendment for a certificate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: certificateId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmendmentCreateRequest'
+      responses:
+        '201':
+          description: Amendment proposed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmendmentResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/amendments/{amendmentId}:
+    get:
+      operationId: getAmendment
+      tags: [Amendments]
+      summary: Get an amendment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: amendmentId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/AmendmentId
+      responses:
+        '200':
+          description: Amendment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmendmentResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/amendments/{amendmentId}/approve:
+    post:
+      operationId: approveAmendment
+      tags: [Amendments]
+      summary: Approve a proposed amendment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: amendmentId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/AmendmentId
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmendmentDecisionRequest'
+      responses:
+        '200':
+          description: Amendment approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmendmentResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/amendments/{amendmentId}/reject:
+    post:
+      operationId: rejectAmendment
+      tags: [Amendments]
+      summary: Reject a proposed amendment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: amendmentId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/AmendmentId
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmendmentDecisionRequest'
+      responses:
+        '200':
+          description: Amendment rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmendmentResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth
+
+  schemas:
+    AmendmentStatus:
+      type: string
+      enum: [proposed, approved, rejected]
+
+    Amendment:
+      type: object
+      required:
+        - id
+        - certificateId
+        - rationale
+        - newPayloadHash
+        - status
+        - priorPayloadHash
+        - createdAt
+      properties:
+        id:
+          $ref: ./common/primitives.yaml#/components/schemas/AmendmentId
+        certificateId:
+          $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+        rationale:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        newPayloadHash:
+          type: string
+          minLength: 1
+        status:
+          $ref: '#/components/schemas/AmendmentStatus'
+        priorPayloadHash:
+          type: string
+          minLength: 1
+          description: Sealed hash before the amendment.
+        createdAt:
+          type: string
+          format: date-time
+        decidedAt:
+          type: string
+          format: date-time
+        decidedBy:
+          type: string
+          minLength: 1
+          description: Operator who approved or rejected the amendment.
+
+    AmendmentCreateRequest:
+      type: object
+      required: [rationale, newPayloadHash]
+      properties:
+        rationale:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        newPayloadHash:
+          type: string
+          minLength: 1
+
+    AmendmentDecisionRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 2000
+
+    AmendmentResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Amendment'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    AmendmentListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Amendment'
+        nextCursor:
+          type: string
+
+    AmendmentListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AmendmentListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Shared security schemes
+  version: 0.1.0
+  description: API-key and bearer auth for tenant-scoped Phytoseal APIs.
+paths: {}
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Tenant API key. Implies tenant isolation — no cross-tenant reads.
+        Machine clients and backbone integrations.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Operator console sessions (clerks, brokers, ops, AEO, NPPO liaison).
+        Issued via identity `/v0/auth/login` (sandbox stub).

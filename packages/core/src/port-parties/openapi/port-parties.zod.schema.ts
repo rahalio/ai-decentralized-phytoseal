@@ -1,0 +1,1581 @@
+import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core';
+import { z } from 'zod';
+
+const createPortParty_Body = z
+  .object({
+    name: z.string().min(1).max(200),
+    partyType: z.enum([
+      'shipper',
+      'forwarder',
+      'terminal',
+      'broker',
+      'nppo',
+      'customs',
+      'platform',
+    ]),
+    disclosureProfile: z.string().optional(),
+    documentClassesEnabled: z.array(z.string().min(1)).optional(),
+  })
+  .passthrough();
+const updatePortParty_Body = z
+  .object({
+    name: z.string().min(1).max(200),
+    disclosureProfile: z.string(),
+    integrationStatus: z.enum(['pending', 'connected', 'error']),
+    documentClassesEnabled: z.array(z.string().min(1)),
+  })
+  .partial()
+  .passthrough();
+const invitePortParty_Body = z
+  .object({
+    contactEmail: z.string().email(),
+    message: z.string().max(2000).optional(),
+  })
+  .passthrough();
+const createDisclosurePolicy_Body = z
+  .object({
+    name: z.string().min(1).max(200),
+    documentClass: z.string().min(1),
+    rules: z
+      .array(
+        z
+          .object({
+            partyRole: z.enum([
+              'shipper',
+              'forwarder',
+              'terminal',
+              'broker',
+              'nppo',
+              'customs',
+              'platform',
+            ]),
+            visibleFields: z.array(z.string().min(1)).min(1),
+          })
+          .passthrough()
+      )
+      .min(1),
+    status: z.enum(['draft', 'published']).optional(),
+  })
+  .passthrough();
+const replaceDisclosurePolicy_Body = z
+  .object({
+    name: z.string().min(1).max(200),
+    documentClass: z.string().min(1),
+    rules: z
+      .array(
+        z
+          .object({
+            partyRole: z.enum([
+              'shipper',
+              'forwarder',
+              'terminal',
+              'broker',
+              'nppo',
+              'customs',
+              'platform',
+            ]),
+            visibleFields: z.array(z.string().min(1)).min(1),
+          })
+          .passthrough()
+      )
+      .min(1),
+    status: z.enum(['draft', 'published']),
+  })
+  .passthrough();
+const simulateDisclosurePolicy_Body = z
+  .object({
+    partyRole: z.enum([
+      'shipper',
+      'forwarder',
+      'terminal',
+      'broker',
+      'nppo',
+      'customs',
+      'platform',
+    ]),
+    sampleFields: z.record(z.string()).optional(),
+  })
+  .passthrough();
+const PartyType = z.enum([
+  'shipper',
+  'forwarder',
+  'terminal',
+  'broker',
+  'nppo',
+  'customs',
+  'platform',
+]);
+const IntegrationStatus = z.enum(['pending', 'connected', 'error']);
+const DisclosurePolicyStatus = z.enum(['draft', 'published']);
+const PortParty = z
+  .object({
+    id: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+    name: z.string().min(1).max(200),
+    partyType: z.enum([
+      'shipper',
+      'forwarder',
+      'terminal',
+      'broker',
+      'nppo',
+      'customs',
+      'platform',
+    ]),
+    disclosureProfile: z.string().optional(),
+    integrationStatus: z.enum(['pending', 'connected', 'error']),
+    documentClassesEnabled: z.array(z.string().min(1)).optional(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+  })
+  .passthrough();
+const PortPartyCreateRequest = z
+  .object({
+    name: z.string().min(1).max(200),
+    partyType: z.enum([
+      'shipper',
+      'forwarder',
+      'terminal',
+      'broker',
+      'nppo',
+      'customs',
+      'platform',
+    ]),
+    disclosureProfile: z.string().optional(),
+    documentClassesEnabled: z.array(z.string().min(1)).optional(),
+  })
+  .passthrough();
+const PortPartyUpdateRequest = z
+  .object({
+    name: z.string().min(1).max(200),
+    disclosureProfile: z.string(),
+    integrationStatus: z.enum(['pending', 'connected', 'error']),
+    documentClassesEnabled: z.array(z.string().min(1)),
+  })
+  .partial()
+  .passthrough();
+const PortPartyInviteRequest = z
+  .object({
+    contactEmail: z.string().email(),
+    message: z.string().max(2000).optional(),
+  })
+  .passthrough();
+const DisclosureRule = z
+  .object({
+    partyRole: z.enum([
+      'shipper',
+      'forwarder',
+      'terminal',
+      'broker',
+      'nppo',
+      'customs',
+      'platform',
+    ]),
+    visibleFields: z.array(z.string().min(1)).min(1),
+  })
+  .passthrough();
+const DisclosurePolicy = z
+  .object({
+    id: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+    name: z.string().min(1).max(200),
+    documentClass: z.string().min(1),
+    rules: z.array(
+      z
+        .object({
+          partyRole: z.enum([
+            'shipper',
+            'forwarder',
+            'terminal',
+            'broker',
+            'nppo',
+            'customs',
+            'platform',
+          ]),
+          visibleFields: z.array(z.string().min(1)).min(1),
+        })
+        .passthrough()
+    ),
+    status: z.enum(['draft', 'published']),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+  })
+  .passthrough();
+const DisclosurePolicyCreateRequest = z
+  .object({
+    name: z.string().min(1).max(200),
+    documentClass: z.string().min(1),
+    rules: z
+      .array(
+        z
+          .object({
+            partyRole: z.enum([
+              'shipper',
+              'forwarder',
+              'terminal',
+              'broker',
+              'nppo',
+              'customs',
+              'platform',
+            ]),
+            visibleFields: z.array(z.string().min(1)).min(1),
+          })
+          .passthrough()
+      )
+      .min(1),
+    status: z.enum(['draft', 'published']).optional(),
+  })
+  .passthrough();
+const DisclosurePolicyReplaceRequest = z
+  .object({
+    name: z.string().min(1).max(200),
+    documentClass: z.string().min(1),
+    rules: z
+      .array(
+        z
+          .object({
+            partyRole: z.enum([
+              'shipper',
+              'forwarder',
+              'terminal',
+              'broker',
+              'nppo',
+              'customs',
+              'platform',
+            ]),
+            visibleFields: z.array(z.string().min(1)).min(1),
+          })
+          .passthrough()
+      )
+      .min(1),
+    status: z.enum(['draft', 'published']),
+  })
+  .passthrough();
+const DisclosurePolicySimulateRequest = z
+  .object({
+    partyRole: z.enum([
+      'shipper',
+      'forwarder',
+      'terminal',
+      'broker',
+      'nppo',
+      'customs',
+      'platform',
+    ]),
+    sampleFields: z.record(z.string()).optional(),
+  })
+  .passthrough();
+const DisclosurePolicySimulateResult = z
+  .object({
+    partyRole: z.enum([
+      'shipper',
+      'forwarder',
+      'terminal',
+      'broker',
+      'nppo',
+      'customs',
+      'platform',
+    ]),
+    visibleFields: z.array(z.string()),
+    projectedFields: z.record(z.string()).optional(),
+  })
+  .passthrough();
+const PortPartyResponse = z
+  .object({
+    data: z
+      .object({
+        id: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+        name: z.string().min(1).max(200),
+        partyType: z.enum([
+          'shipper',
+          'forwarder',
+          'terminal',
+          'broker',
+          'nppo',
+          'customs',
+          'platform',
+        ]),
+        disclosureProfile: z.string().optional(),
+        integrationStatus: z.enum(['pending', 'connected', 'error']),
+        documentClassesEnabled: z.array(z.string().min(1)).optional(),
+        createdAt: z.string().datetime({ offset: true }),
+        updatedAt: z.string().datetime({ offset: true }),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const PortPartyListData = z
+  .object({
+    items: z.array(
+      z
+        .object({
+          id: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+          name: z.string().min(1).max(200),
+          partyType: z.enum([
+            'shipper',
+            'forwarder',
+            'terminal',
+            'broker',
+            'nppo',
+            'customs',
+            'platform',
+          ]),
+          disclosureProfile: z.string().optional(),
+          integrationStatus: z.enum(['pending', 'connected', 'error']),
+          documentClassesEnabled: z.array(z.string().min(1)).optional(),
+          createdAt: z.string().datetime({ offset: true }),
+          updatedAt: z.string().datetime({ offset: true }),
+        })
+        .passthrough()
+    ),
+    nextCursor: z.string().optional(),
+  })
+  .passthrough();
+const PortPartyListResponse = z
+  .object({
+    data: z
+      .object({
+        items: z.array(
+          z
+            .object({
+              id: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+              name: z.string().min(1).max(200),
+              partyType: z.enum([
+                'shipper',
+                'forwarder',
+                'terminal',
+                'broker',
+                'nppo',
+                'customs',
+                'platform',
+              ]),
+              disclosureProfile: z.string().optional(),
+              integrationStatus: z.enum(['pending', 'connected', 'error']),
+              documentClassesEnabled: z.array(z.string().min(1)).optional(),
+              createdAt: z.string().datetime({ offset: true }),
+              updatedAt: z.string().datetime({ offset: true }),
+            })
+            .passthrough()
+        ),
+        nextCursor: z.string().optional(),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const DisclosurePolicyResponse = z
+  .object({
+    data: z
+      .object({
+        id: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+        name: z.string().min(1).max(200),
+        documentClass: z.string().min(1),
+        rules: z.array(
+          z
+            .object({
+              partyRole: z.enum([
+                'shipper',
+                'forwarder',
+                'terminal',
+                'broker',
+                'nppo',
+                'customs',
+                'platform',
+              ]),
+              visibleFields: z.array(z.string().min(1)).min(1),
+            })
+            .passthrough()
+        ),
+        status: z.enum(['draft', 'published']),
+        createdAt: z.string().datetime({ offset: true }),
+        updatedAt: z.string().datetime({ offset: true }),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const DisclosurePolicyListData = z
+  .object({
+    items: z.array(
+      z
+        .object({
+          id: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+          name: z.string().min(1).max(200),
+          documentClass: z.string().min(1),
+          rules: z.array(
+            z
+              .object({
+                partyRole: z.enum([
+                  'shipper',
+                  'forwarder',
+                  'terminal',
+                  'broker',
+                  'nppo',
+                  'customs',
+                  'platform',
+                ]),
+                visibleFields: z.array(z.string().min(1)).min(1),
+              })
+              .passthrough()
+          ),
+          status: z.enum(['draft', 'published']),
+          createdAt: z.string().datetime({ offset: true }),
+          updatedAt: z.string().datetime({ offset: true }),
+        })
+        .passthrough()
+    ),
+    nextCursor: z.string().optional(),
+  })
+  .passthrough();
+const DisclosurePolicyListResponse = z
+  .object({
+    data: z
+      .object({
+        items: z.array(
+          z
+            .object({
+              id: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+              name: z.string().min(1).max(200),
+              documentClass: z.string().min(1),
+              rules: z.array(
+                z
+                  .object({
+                    partyRole: z.enum([
+                      'shipper',
+                      'forwarder',
+                      'terminal',
+                      'broker',
+                      'nppo',
+                      'customs',
+                      'platform',
+                    ]),
+                    visibleFields: z.array(z.string().min(1)).min(1),
+                  })
+                  .passthrough()
+              ),
+              status: z.enum(['draft', 'published']),
+              createdAt: z.string().datetime({ offset: true }),
+              updatedAt: z.string().datetime({ offset: true }),
+            })
+            .passthrough()
+        ),
+        nextCursor: z.string().optional(),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const DisclosurePolicySimulateResponse = z
+  .object({
+    data: z
+      .object({
+        partyRole: z.enum([
+          'shipper',
+          'forwarder',
+          'terminal',
+          'broker',
+          'nppo',
+          'customs',
+          'platform',
+        ]),
+        visibleFields: z.array(z.string()),
+        projectedFields: z.record(z.string()).optional(),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const Problem = z
+  .object({
+    type: z.string().url(),
+    title: z.string(),
+    status: z.number().int(),
+    detail: z.string(),
+    instance: z.string().url(),
+    code: z.string(),
+  })
+  .partial()
+  .passthrough();
+const PortPartyId = z.string();
+const ResponseMeta = z
+  .object({
+    requestId: z.string().uuid(),
+    correlationId: z.string(),
+    generatedAt: z.string().datetime({ offset: true }),
+  })
+  .partial()
+  .passthrough();
+const DisclosurePolicyId = z.string();
+
+export const schemas: any = {
+  createPortParty_Body,
+  updatePortParty_Body,
+  invitePortParty_Body,
+  createDisclosurePolicy_Body,
+  replaceDisclosurePolicy_Body,
+  simulateDisclosurePolicy_Body,
+  PartyType,
+  IntegrationStatus,
+  DisclosurePolicyStatus,
+  PortParty,
+  PortPartyCreateRequest,
+  PortPartyUpdateRequest,
+  PortPartyInviteRequest,
+  DisclosureRule,
+  DisclosurePolicy,
+  DisclosurePolicyCreateRequest,
+  DisclosurePolicyReplaceRequest,
+  DisclosurePolicySimulateRequest,
+  DisclosurePolicySimulateResult,
+  PortPartyResponse,
+  PortPartyListData,
+  PortPartyListResponse,
+  DisclosurePolicyResponse,
+  DisclosurePolicyListData,
+  DisclosurePolicyListResponse,
+  DisclosurePolicySimulateResponse,
+  Problem,
+  PortPartyId,
+  ResponseMeta,
+  DisclosurePolicyId,
+};
+
+const endpoints = makeApi([
+  {
+    method: 'get',
+    path: '/v1/disclosure-policies',
+    alias: 'listDisclosurePolicies',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'cursor',
+        type: 'Query',
+        schema: z.string().min(1).max(512).optional(),
+      },
+      {
+        name: 'limit',
+        type: 'Query',
+        schema: z.number().int().gte(1).lte(100).optional().default(25),
+      },
+      {
+        name: 'status',
+        type: 'Query',
+        schema: z.enum(['draft', 'published']).optional(),
+      },
+      {
+        name: 'documentClass',
+        type: 'Query',
+        schema: z.string().optional(),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            items: z.array(
+              z
+                .object({
+                  id: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+                  name: z.string().min(1).max(200),
+                  documentClass: z.string().min(1),
+                  rules: z.array(
+                    z
+                      .object({
+                        partyRole: z.enum([
+                          'shipper',
+                          'forwarder',
+                          'terminal',
+                          'broker',
+                          'nppo',
+                          'customs',
+                          'platform',
+                        ]),
+                        visibleFields: z.array(z.string().min(1)).min(1),
+                      })
+                      .passthrough()
+                  ),
+                  status: z.enum(['draft', 'published']),
+                  createdAt: z.string().datetime({ offset: true }),
+                  updatedAt: z.string().datetime({ offset: true }),
+                })
+                .passthrough()
+            ),
+            nextCursor: z.string().optional(),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: 'post',
+    path: '/v1/disclosure-policies',
+    alias: 'createDisclosurePolicy',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: createDisclosurePolicy_Body,
+      },
+      {
+        name: 'Idempotency-Key',
+        type: 'Header',
+        schema: z.string().min(1).max(128),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            id: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+            name: z.string().min(1).max(200),
+            documentClass: z.string().min(1),
+            rules: z.array(
+              z
+                .object({
+                  partyRole: z.enum([
+                    'shipper',
+                    'forwarder',
+                    'terminal',
+                    'broker',
+                    'nppo',
+                    'customs',
+                    'platform',
+                  ]),
+                  visibleFields: z.array(z.string().min(1)).min(1),
+                })
+                .passthrough()
+            ),
+            status: z.enum(['draft', 'published']),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 400,
+        description: `Malformed request`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 409,
+        description: `Idempotency key reuse with different body, or state conflict`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: 'get',
+    path: '/v1/disclosure-policies/:policyId',
+    alias: 'getDisclosurePolicy',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'policyId',
+        type: 'Path',
+        schema: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            id: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+            name: z.string().min(1).max(200),
+            documentClass: z.string().min(1),
+            rules: z.array(
+              z
+                .object({
+                  partyRole: z.enum([
+                    'shipper',
+                    'forwarder',
+                    'terminal',
+                    'broker',
+                    'nppo',
+                    'customs',
+                    'platform',
+                  ]),
+                  visibleFields: z.array(z.string().min(1)).min(1),
+                })
+                .passthrough()
+            ),
+            status: z.enum(['draft', 'published']),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Resource not found`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: 'put',
+    path: '/v1/disclosure-policies/:policyId',
+    alias: 'replaceDisclosurePolicy',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: replaceDisclosurePolicy_Body,
+      },
+      {
+        name: 'policyId',
+        type: 'Path',
+        schema: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+      },
+      {
+        name: 'Idempotency-Key',
+        type: 'Header',
+        schema: z.string().min(1).max(128),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            id: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+            name: z.string().min(1).max(200),
+            documentClass: z.string().min(1),
+            rules: z.array(
+              z
+                .object({
+                  partyRole: z.enum([
+                    'shipper',
+                    'forwarder',
+                    'terminal',
+                    'broker',
+                    'nppo',
+                    'customs',
+                    'platform',
+                  ]),
+                  visibleFields: z.array(z.string().min(1)).min(1),
+                })
+                .passthrough()
+            ),
+            status: z.enum(['draft', 'published']),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 400,
+        description: `Malformed request`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Resource not found`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 409,
+        description: `Idempotency key reuse with different body, or state conflict`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: 'post',
+    path: '/v1/disclosure-policies/:policyId/simulate',
+    alias: 'simulateDisclosurePolicy',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: simulateDisclosurePolicy_Body,
+      },
+      {
+        name: 'policyId',
+        type: 'Path',
+        schema: z.string().regex(/^dpl_[0-9A-HJKMNP-TV-Z]{26}$/),
+      },
+      {
+        name: 'Idempotency-Key',
+        type: 'Header',
+        schema: z.string().min(1).max(128),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            partyRole: z.enum([
+              'shipper',
+              'forwarder',
+              'terminal',
+              'broker',
+              'nppo',
+              'customs',
+              'platform',
+            ]),
+            visibleFields: z.array(z.string()),
+            projectedFields: z.record(z.string()).optional(),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 400,
+        description: `Malformed request`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Resource not found`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: 'get',
+    path: '/v1/port-parties',
+    alias: 'listPortParties',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'cursor',
+        type: 'Query',
+        schema: z.string().min(1).max(512).optional(),
+      },
+      {
+        name: 'limit',
+        type: 'Query',
+        schema: z.number().int().gte(1).lte(100).optional().default(25),
+      },
+      {
+        name: 'partyType',
+        type: 'Query',
+        schema: z
+          .enum([
+            'shipper',
+            'forwarder',
+            'terminal',
+            'broker',
+            'nppo',
+            'customs',
+            'platform',
+          ])
+          .optional(),
+      },
+      {
+        name: 'integrationStatus',
+        type: 'Query',
+        schema: z.enum(['pending', 'connected', 'error']).optional(),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            items: z.array(
+              z
+                .object({
+                  id: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+                  name: z.string().min(1).max(200),
+                  partyType: z.enum([
+                    'shipper',
+                    'forwarder',
+                    'terminal',
+                    'broker',
+                    'nppo',
+                    'customs',
+                    'platform',
+                  ]),
+                  disclosureProfile: z.string().optional(),
+                  integrationStatus: z.enum(['pending', 'connected', 'error']),
+                  documentClassesEnabled: z.array(z.string().min(1)).optional(),
+                  createdAt: z.string().datetime({ offset: true }),
+                  updatedAt: z.string().datetime({ offset: true }),
+                })
+                .passthrough()
+            ),
+            nextCursor: z.string().optional(),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: 'post',
+    path: '/v1/port-parties',
+    alias: 'createPortParty',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: createPortParty_Body,
+      },
+      {
+        name: 'Idempotency-Key',
+        type: 'Header',
+        schema: z.string().min(1).max(128),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            id: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+            name: z.string().min(1).max(200),
+            partyType: z.enum([
+              'shipper',
+              'forwarder',
+              'terminal',
+              'broker',
+              'nppo',
+              'customs',
+              'platform',
+            ]),
+            disclosureProfile: z.string().optional(),
+            integrationStatus: z.enum(['pending', 'connected', 'error']),
+            documentClassesEnabled: z.array(z.string().min(1)).optional(),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 400,
+        description: `Malformed request`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 409,
+        description: `Idempotency key reuse with different body, or state conflict`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: 'get',
+    path: '/v1/port-parties/:partyId',
+    alias: 'getPortParty',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'partyId',
+        type: 'Path',
+        schema: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            id: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+            name: z.string().min(1).max(200),
+            partyType: z.enum([
+              'shipper',
+              'forwarder',
+              'terminal',
+              'broker',
+              'nppo',
+              'customs',
+              'platform',
+            ]),
+            disclosureProfile: z.string().optional(),
+            integrationStatus: z.enum(['pending', 'connected', 'error']),
+            documentClassesEnabled: z.array(z.string().min(1)).optional(),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Resource not found`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: 'patch',
+    path: '/v1/port-parties/:partyId',
+    alias: 'updatePortParty',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: updatePortParty_Body,
+      },
+      {
+        name: 'partyId',
+        type: 'Path',
+        schema: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+      },
+      {
+        name: 'Idempotency-Key',
+        type: 'Header',
+        schema: z.string().min(1).max(128),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            id: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+            name: z.string().min(1).max(200),
+            partyType: z.enum([
+              'shipper',
+              'forwarder',
+              'terminal',
+              'broker',
+              'nppo',
+              'customs',
+              'platform',
+            ]),
+            disclosureProfile: z.string().optional(),
+            integrationStatus: z.enum(['pending', 'connected', 'error']),
+            documentClassesEnabled: z.array(z.string().min(1)).optional(),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 400,
+        description: `Malformed request`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Resource not found`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: 'post',
+    path: '/v1/port-parties/:partyId/invite',
+    alias: 'invitePortParty',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: invitePortParty_Body,
+      },
+      {
+        name: 'partyId',
+        type: 'Path',
+        schema: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+      },
+      {
+        name: 'Idempotency-Key',
+        type: 'Header',
+        schema: z.string().min(1).max(128),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            id: z.string().regex(/^pty_[0-9A-HJKMNP-TV-Z]{26}$/),
+            name: z.string().min(1).max(200),
+            partyType: z.enum([
+              'shipper',
+              'forwarder',
+              'terminal',
+              'broker',
+              'nppo',
+              'customs',
+              'platform',
+            ]),
+            disclosureProfile: z.string().optional(),
+            integrationStatus: z.enum(['pending', 'connected', 'error']),
+            documentClassesEnabled: z.array(z.string().min(1)).optional(),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    errors: [
+      {
+        status: 400,
+        description: `Malformed request`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 401,
+        description: `Missing or invalid API key`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Resource not found`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 409,
+        description: `Idempotency key reuse with different body, or state conflict`,
+        schema: z
+          .object({
+            type: z.string().url(),
+            title: z.string(),
+            status: z.number().int(),
+            detail: z.string(),
+            instance: z.string().url(),
+            code: z.string(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+]);
+
+export const api: any = new Zodios('https://api.phytoseal.local/v1', endpoints);
+
+export function createApiClient(baseUrl: string, options?: ZodiosOptions): any {
+  return new Zodios(baseUrl, endpoints, options);
+}

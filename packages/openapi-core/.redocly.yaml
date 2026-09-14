@@ -1,0 +1,34 @@
+apis:
+  identity:
+    root: src/identity.yaml
+  port-parties:
+    root: src/port-parties.yaml
+  certificates:
+    root: src/certificates.yaml
+  amendments:
+    root: src/amendments.yaml
+  classifications:
+    root: src/classifications.yaml
+  legal-holds:
+    root: src/legal-holds.yaml
+  evidence-packs:
+    root: src/evidence-packs.yaml
+  metrics:
+    root: src/metrics.yaml
+
+extends:
+  - recommended
+
+rules:
+  no-unused-components: off
+  operation-4xx-response: warn
+  info-license: off
+  info-license-url: off
+  tag-description: off
+  operation-operationId: error
+  no-invalid-media-type-examples: off
+
+theme:
+  openapi:
+    generateCodeSamples:
+      languages: []

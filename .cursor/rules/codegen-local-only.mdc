@@ -1,0 +1,13 @@
+---
+description: Never commit or push .codegen; copy it from the scaffold locally
+alwaysApply: true
+---
+
+# Codegen is local-only
+
+`.codegen/` must **never** be committed or pushed to GitHub.
+
+- Keep `.codegen/` in `.gitignore`.
+- Obtain or refresh the tool by copying from `zero-apps-codegen-scaffold` (do not move or delete files in the scaffold).
+- Run `pnpm codegen:paths` after copying so merged config paths match this repo.
+- Do not force-add `.codegen`, `codegen/`, or `**/zero_codegen/` to git.

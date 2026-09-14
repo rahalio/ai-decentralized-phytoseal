@@ -1,0 +1,246 @@
+openapi: 3.1.0
+info:
+  title: Phytoseal Legal Holds API
+  version: 0.1.0
+  description: |
+    Legal holds on certificates — place and release holds that freeze sealed
+    certificate workflow pending jurisdictional review.
+  license:
+    name: Proprietary
+    url: https://phytoseal.local/license
+  x-domain: hld
+servers:
+  - url: https://api.phytoseal.local
+    description: Phytoseal API
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: LegalHolds
+    description: Certificate legal holds
+
+paths:
+  /v1/legal-holds:
+    get:
+      operationId: listLegalHolds
+      tags: [LegalHolds]
+      summary: List legal holds
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/Cursor
+        - $ref: ./common/parameters.yaml#/components/parameters/Limit
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/LegalHoldStatus'
+        - name: jurisdiction
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Legal holds page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalHoldListResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: createLegalHold
+      tags: [LegalHolds]
+      summary: Place a legal hold on certificates
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LegalHoldCreateRequest'
+      responses:
+        '201':
+          description: Legal hold created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalHoldResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/legal-holds/{holdId}:
+    get:
+      operationId: getLegalHold
+      tags: [LegalHolds]
+      summary: Get a legal hold
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: holdId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/LegalHoldId
+      responses:
+        '200':
+          description: Legal hold
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalHoldResponse'
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+  /v1/legal-holds/{holdId}/release:
+    post:
+      operationId: releaseLegalHold
+      tags: [LegalHolds]
+      summary: Release an active legal hold
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: holdId
+          in: path
+          required: true
+          schema:
+            $ref: ./common/primitives.yaml#/components/schemas/LegalHoldId
+        - $ref: ./common/parameters.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LegalHoldReleaseRequest'
+      responses:
+        '200':
+          description: Legal hold released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalHoldResponse'
+        '400':
+          $ref: ./common/responses.yaml#/components/responses/BadRequest
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth
+
+  schemas:
+    LegalHoldStatus:
+      type: string
+      enum: [active, released]
+
+    LegalHold:
+      type: object
+      required:
+        - id
+        - jurisdiction
+        - rationale
+        - status
+        - affectedCertificateIds
+        - createdAt
+      properties:
+        id:
+          $ref: ./common/primitives.yaml#/components/schemas/LegalHoldId
+        jurisdiction:
+          type: string
+          minLength: 1
+          maxLength: 200
+        rationale:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        status:
+          $ref: '#/components/schemas/LegalHoldStatus'
+        affectedCertificateIds:
+          type: array
+          items:
+            $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+          minItems: 1
+        createdAt:
+          type: string
+          format: date-time
+        releasedAt:
+          type: string
+          format: date-time
+
+    LegalHoldCreateRequest:
+      type: object
+      required: [jurisdiction, rationale, affectedCertificateIds]
+      properties:
+        jurisdiction:
+          type: string
+          minLength: 1
+          maxLength: 200
+        rationale:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        affectedCertificateIds:
+          type: array
+          items:
+            $ref: ./common/primitives.yaml#/components/schemas/CertificateId
+          minItems: 1
+
+    LegalHoldReleaseRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 2000
+
+    LegalHoldResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/LegalHold'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    LegalHoldListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LegalHold'
+        nextCursor:
+          type: string
+
+    LegalHoldListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/LegalHoldListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

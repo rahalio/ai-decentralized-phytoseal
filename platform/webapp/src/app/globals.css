@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: #e7eef4;
+  --color-harbour-950: #0a1520;
+  --color-harbour-900: #122232;
+  --color-harbour-700: #2a4054;
+  --color-seal: #3db8c5;
+  --color-seal-dim: #1a6a72;
+  --color-amber: #d9a04a;
+  --color-coral: #e05a4c;
+  --color-steel: #7a94a8;
+  --color-brand: #9fcbd4;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --motion-lock: 180ms ease-out;
+  --motion-hold: 240ms ease-in-out;
+  --motion-queue: 160ms ease-out;
+  /* aliases used by shared classnames */
+  --color-charcoal-950: var(--color-harbour-950);
+  --color-charcoal-900: var(--color-harbour-900);
+  --color-gate: var(--color-seal);
+  --color-hazard: var(--color-amber);
+  --color-emergency: var(--color-coral);
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--color-harbour-950);
+  color: var(--color-ink);
+}
+
+body {
+  background-image:
+    linear-gradient(165deg, rgba(10, 21, 32, 0.92) 0%, rgba(18, 34, 50, 0.88) 45%, rgba(42, 64, 84, 0.35) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 48px,
+      rgba(122, 148, 168, 0.04) 48px 49px
+    );
+  background-attachment: fixed;
+}
+
+@keyframes seal-lock {
+  0% { background-color: rgba(61, 184, 197, 0.22); }
+  100% { background-color: transparent; }
+}
+
+@keyframes hold-pulse {
+  0%,
+  100% { box-shadow: 0 0 0 0 rgba(217, 160, 74, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(217, 160, 74, 0); }
+}
+
+@keyframes queue-select {
+  0% { background-color: rgba(159, 203, 212, 0.12); }
+  100% { background-color: transparent; }
+}
+
+.motion-lock {
+  animation: seal-lock var(--motion-lock);
+}
+
+.motion-hold {
+  animation: hold-pulse var(--motion-hold) infinite;
+}
+
+.motion-queue {
+  animation: queue-select var(--motion-queue);
+}
