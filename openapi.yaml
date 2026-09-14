@@ -1,0 +1,539 @@
+openapi: 3.0.3
+info:
+  title: Phytoseal
+  version: 0.1.0
+  description: >-
+    Port-network phytosanitary certificate ledger with ai-assisted HS/HTS
+    classification for customs and AEO workflows.
+  x-product-slug: ai-decentralized-phytoseal
+  x-source: ai-in-decentralized+ai/Blockchain, IoT, AI/
+servers:
+  - url: https://api.example.com
+tags:
+  - name: PortParties
+  - name: Certificates
+  - name: Classifications
+  - name: Amendments
+  - name: EvidencePacks
+paths:
+  /v1/port-parties:
+    get:
+      operationId: listPortParties
+      tags: [PortParties]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Parties page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopePortParty"
+    post:
+      operationId: registerPortParty
+      tags: [PortParties]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortPartyCreate"
+      responses:
+        "201":
+          description: Party registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopePortParty"
+  /v1/certificates:
+    get:
+      operationId: listCertificates
+      tags: [Certificates]
+      security: [{ BearerAuth: [] }, { ApiKeyAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, issued, presented, accepted, rejected, amended]
+      responses:
+        "200":
+          description: Certificates page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeCertificate"
+    post:
+      operationId: registerCertificate
+      tags: [Certificates]
+      security: [{ BearerAuth: [] }, { ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificateCreate"
+      responses:
+        "201":
+          description: Certificate registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCertificate"
+  /v1/certificates/{certificateId}/present:
+    parameters:
+      - name: certificateId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      operationId: presentCertificate
+      tags: [Certificates]
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [importAuthorityId]
+              properties:
+                importAuthorityId: { type: string }
+      responses:
+        "202":
+          description: Presentation submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCertificate"
+  /v1/certificates/{certificateId}/decision:
+    parameters:
+      - name: certificateId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      operationId: decideCertificate
+      tags: [Certificates]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome]
+              properties:
+                outcome:
+                  type: string
+                  enum: [accepted, rejected]
+                reasonCode: { type: string }
+      responses:
+        "200":
+          description: Decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCertificate"
+  /v1/certificates/{certificateId}/amendments:
+    parameters:
+      - name: certificateId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      operationId: amendCertificate
+      tags: [Amendments]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AmendmentCreate"
+      responses:
+        "201":
+          description: Amendment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAmendment"
+  /v1/classification-proposals:
+    get:
+      operationId: listClassificationProposals
+      tags: [Classifications]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Proposals page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeClassificationProposal"
+    post:
+      operationId: createClassificationProposal
+      tags: [Classifications]
+      security: [{ BearerAuth: [] }, { ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassificationProposalCreate"
+      responses:
+        "201":
+          description: Proposal created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeClassificationProposal"
+  /v1/classification-proposals/{proposalId}/review:
+    parameters:
+      - name: proposalId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      operationId: reviewClassificationProposal
+      tags: [Classifications]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrokerReview"
+      responses:
+        "200":
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeClassificationProposal"
+  /v1/evidence-packs:
+    post:
+      operationId: createAeoEvidencePack
+      tags: [EvidencePacks]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidencePackCreate"
+      responses:
+        "201":
+          description: Evidence pack created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeEvidencePack"
+  /v1/evidence-packs/{packId}:
+    parameters:
+      - name: packId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getEvidencePack
+      tags: [EvidencePacks]
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Evidence pack
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeEvidencePack"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    UnprocessableEntity:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    ResponseMeta:
+      type: object
+      required: [requestId, timestamp]
+      properties:
+        requestId: { type: string }
+        timestamp: { type: string, format: date-time }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+
+    PortParty:
+      type: object
+      required: [id, name, partyType]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        partyType:
+          type: string
+          enum: [shipper, forwarder, terminal, broker, nppo, customs, platform]
+        disclosureProfile: { type: string }
+    PortPartyCreate:
+      type: object
+      required: [name, partyType]
+      properties:
+        name: { type: string }
+        partyType:
+          type: string
+          enum: [shipper, forwarder, terminal, broker, nppo, customs, platform]
+        disclosureProfile: { type: string }
+    Certificate:
+      type: object
+      required: [id, certificateType, status, payloadHash]
+      properties:
+        id: { type: string }
+        certificateType:
+          type: string
+          enum: [phytosanitary, related_authorisation]
+        status:
+          type: string
+          enum: [draft, issued, presented, accepted, rejected, amended]
+        payloadHash: { type: string }
+        exportAuthorityId: { type: string }
+        importAuthorityId: { type: string }
+        shipmentRef: { type: string }
+    CertificateCreate:
+      type: object
+      required: [certificateType, payloadHash, exportAuthorityId, shipmentRef]
+      properties:
+        certificateType:
+          type: string
+          enum: [phytosanitary, related_authorisation]
+        payloadHash: { type: string }
+        exportAuthorityId: { type: string }
+        shipmentRef: { type: string }
+    Amendment:
+      type: object
+      required: [id, certificateId, rationale]
+      properties:
+        id: { type: string }
+        certificateId: { type: string }
+        rationale: { type: string }
+        newPayloadHash: { type: string }
+    AmendmentCreate:
+      type: object
+      required: [rationale, newPayloadHash]
+      properties:
+        rationale: { type: string }
+        newPayloadHash: { type: string }
+    ClassificationProposal:
+      type: object
+      required: [id, materialDescription, status]
+      properties:
+        id: { type: string }
+        materialDescription: { type: string }
+        proposedHsCode: { type: string }
+        proposedEccn: { type: string }
+        confidence: { type: number, format: float }
+        status:
+          type: string
+          enum: [proposed, approved, overridden, rejected]
+        finalHsCode: { type: string }
+        brokerAnnotation: { type: string }
+    ClassificationProposalCreate:
+      type: object
+      required: [materialDescription]
+      properties:
+        materialDescription: { type: string }
+        materialNumber: { type: string }
+    BrokerReview:
+      type: object
+      required: [outcome]
+      properties:
+        outcome:
+          type: string
+          enum: [approved, overridden, rejected]
+        finalHsCode: { type: string }
+        brokerAnnotation: { type: string }
+    EvidencePack:
+      type: object
+      required: [id, period, packHash]
+      properties:
+        id: { type: string }
+        period: { type: string }
+        packHash: { type: string }
+        certificateCount: { type: integer }
+        classificationReviewCount: { type: integer }
+    EvidencePackCreate:
+      type: object
+      required: [period]
+      properties:
+        period: { type: string }
+        partyId: { type: string }
+
+    DataEnvelopePortParty:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/PortParty"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopePortParty:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/PortParty"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    DataEnvelopeCertificate:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Certificate"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeCertificate:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Certificate"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    DataEnvelopeAmendment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Amendment"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeAmendment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Amendment"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    DataEnvelopeClassificationProposal:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ClassificationProposal"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeClassificationProposal:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ClassificationProposal"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    DataEnvelopeEvidencePack:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/EvidencePack"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeEvidencePack:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/EvidencePack"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
